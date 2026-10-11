@@ -121,6 +121,11 @@
         </div>
 
         <div class="topbar-right">
+          <button class="btn btn-sm btn-outline-danger" id="btn-topbar-clear-data" title="Clear all recorded data for demo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Clear data
+          </button>
+
           <button class="btn btn-sm btn-outline-secondary btn-header-export" id="btn-header-export-csv" style="display:none;" aria-label="Export CSV">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
             Export CSV
@@ -1306,17 +1311,17 @@
   <div class="modal-overlay" id="modal-reset-db-overlay">
     <div class="modal-card modal-sm">
       <div class="modal-header">
-        <h3>Delete all data?</h3>
+        <h3>Clear all data?</h3>
         <button type="button" class="modal-close-btn" id="btn-close-reset-db" aria-label="Close dialog">&times;</button>
       </div>
       <div class="modal-body">
         <p style="color:var(--text-main);font-size:14px;line-height:20px;">
-          This removes every student, invoice, and payment from the system. This action cannot be undone.
+          This will erase all recorded students, fee invoices, payments, and exceptions so the application is completely empty and ready for a fresh live demo.
         </p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" id="btn-cancel-reset-db">Cancel</button>
-        <button type="button" class="btn btn-danger" id="btn-confirm-reset-db">Delete everything</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-reset-db">Clear all data</button>
       </div>
     </div>
   </div>

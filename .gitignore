@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite temporary WAL/SHM files
+*.db-shm
+*.db-wal
+
+# Pytest & Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment and IDE
+.env
+.venv
+env/
+venv/
+.vscode/
+.idea/
+.DS_Store

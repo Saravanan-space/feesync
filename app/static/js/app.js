@@ -2363,6 +2363,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const topbarClearDataBtn = document.getElementById("btn-topbar-clear-data");
+  if (topbarClearDataBtn) {
+    topbarClearDataBtn.addEventListener("click", () => {
+      openResetConfirmModal();
+    });
+  }
+
   async function triggerLoadDemo() {
     try {
       showToast("Loading demo dataset...", "info");
@@ -2391,8 +2398,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (modalResetDb) modalResetDb.classList.remove("active");
       try {
         await apiFetch("/api/demo/reset", { method: "POST" });
-        showToast("All data has been deleted. Schema is clean.");
+        updateSidebarExceptionsBadge(0);
+        showToast("All recorded data has been erased. The application is empty and ready for demo.");
+        state.allExceptionsForTab = [];
+        state.summary = null;
         await loadViewData(state.currentView);
+        if (state.currentView !== "dashboard") {
+          fetchDashboardData();
+        }
       } catch {
         // Handled in apiFetch
       }
