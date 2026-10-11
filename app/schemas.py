@@ -124,6 +124,8 @@ class PaymentCreate(BaseModel):
     amount: Any  # can be int paise, float rupees, or string with currency symbols
     method: Optional[str] = "OTHER"
     payment_date: Any  # can be date object or string formatted date
+    reenter_payment_id: Optional[int] = None
+    reenter_exception_id: Optional[int] = None
 
 
 class PaymentOut(BaseModel):

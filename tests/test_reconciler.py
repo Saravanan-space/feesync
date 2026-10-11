@@ -678,3 +678,59 @@ def test_overpayment_roll_advance_credit_action(db_session):
     assert "Rolled Forward" in exc.resolution_note
 
 
+def test_reenter_invalid_payment(db_session):
+    student = Student(student_id="1KS25AI103", name="Rohan Verma")
+    db_session.add(student)
+    invoice = Invoice(
+        invoice_id="INV-003",
+        student_id="1KS25AI103",
+        description="Semester 1 Tuition",
+        amount_due=5000000,  # ₹50,000 in paise
+        due_date=date(2026, 11, 15),
+        status="Pending",
+    )
+    db_session.add(invoice)
+    db_session.commit()
+
+    # 1. First insert invalid payment (missing amount)
+    raw_invalid = {
+        "txn_ref": "TXN2026100808",
+        "student_ref": "1KS25AI103",
+        "invoice_ref": "INV-003",
+        "payer_name": "Rohan Verma",
+        "amount": "0",
+        "method": "OTHER",
+        "payment_date": "2026-10-07",
+    }
+    pmt_invalid = process_single_payment(db_session, raw_invalid)
+    db_session.commit()
+
+    assert pmt_invalid.match_status == "Invalid"
+    assert len(pmt_invalid.exceptions) == 1
+    assert pmt_invalid.exceptions[0].reason_code == "INVALID_ROW"
+    assert pmt_invalid.exceptions[0].resolved is False
+
+    # 2. Re-enter payment with valid amount
+    raw_reentered = {
+        "txn_ref": "TXN2026100808",
+        "student_ref": "1KS25AI103",
+        "invoice_ref": "INV-003",
+        "payer_name": "Rohan Verma",
+        "amount": "50000",
+        "method": "OTHER",
+        "payment_date": "2026-10-07",
+    }
+    pmt_updated = process_single_payment(db_session, raw_reentered, existing_payment_id=pmt_invalid.id)
+    db_session.commit()
+    db_session.refresh(invoice)
+
+    assert pmt_updated.id == pmt_invalid.id
+    assert pmt_updated.amount == 5000000  # ₹50,000 in paise
+    assert pmt_updated.match_status == "Matched"
+    assert len(pmt_updated.allocations) == 1
+    assert pmt_updated.allocations[0].amount_applied == 5000000
+    assert invoice.status == "Paid"
+    assert pmt_updated.exceptions[0].resolved is True
+
+
+

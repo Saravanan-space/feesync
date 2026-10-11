@@ -1136,10 +1136,12 @@
   <div class="modal-overlay" id="modal-payment-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Record Manual Payment</h3>
+        <h3 id="modal-pmt-title">Record Manual Payment</h3>
         <button class="modal-close-btn" id="btn-close-payment-modal">&times;</button>
       </div>
       <form id="form-manual-payment">
+        <input type="hidden" id="inp-pmt-reenter-id" value="">
+        <input type="hidden" id="inp-pmt-exception-id" value="">
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group col-6">

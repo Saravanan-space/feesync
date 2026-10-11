@@ -159,13 +159,31 @@ async def import_payments_csv(file: UploadFile = File(...), db: Session = Depend
 
 @router.post("/api/payments", response_model=PaymentOut, status_code=status.HTTP_201_CREATED)
 def create_manual_payment(payment_in: PaymentCreate, db: Session = Depends(get_db)):
-    """Creates and processes a single manual payment entry."""
+    """Creates and processes a single manual payment entry (or updates a re-entered payment)."""
     try:
         row_dict = payment_in.model_dump()
-        pmt = process_single_payment(db=db, raw_row=row_dict)
+        target_payment_id = payment_in.reenter_payment_id
+        if not target_payment_id and payment_in.reenter_exception_id:
+            exc_obj = db.query(ExceptionRecord).filter(ExceptionRecord.id == payment_in.reenter_exception_id).first()
+            if exc_obj:
+                target_payment_id = exc_obj.payment_id
+
+        if not target_payment_id and row_dict.get("txn_ref"):
+            inv_pmt = db.query(Payment).filter(
+                Payment.txn_ref == str(row_dict["txn_ref"]).strip(),
+                Payment.match_status == "Invalid"
+            ).first()
+            if inv_pmt:
+                target_payment_id = inv_pmt.id
+
+        pmt = process_single_payment(
+            db=db,
+            raw_row=row_dict,
+            existing_payment_id=target_payment_id
+        )
         db.commit()
         db.refresh(pmt)
-        return serialize_payment(pmt)
+        return serialize_payment(pmt, db=db)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

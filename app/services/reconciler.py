@@ -138,6 +138,7 @@ def check_duplicate(
     method: str,
     payment_date: date,
     seen_txn_refs: Dict[str, int],
+    exclude_payment_id: Optional[int] = None,
 ) -> Tuple[bool, bool, Optional[int], Optional[str]]:
     """
     Checks for exact duplicates or suspected duplicates.
@@ -148,17 +149,21 @@ def check_duplicate(
         # Check in current batch memory
         if txn_ref in seen_txn_refs:
             orig_id = seen_txn_refs[txn_ref]
-            return True, False, orig_id, f"Duplicate txn_ref '{txn_ref}' in same batch (first occurrence #{orig_id})"
+            if not exclude_payment_id or orig_id != exclude_payment_id:
+                return True, False, orig_id, f"Duplicate txn_ref '{txn_ref}' in same batch (first occurrence #{orig_id})"
 
         # Check in DB
-        existing_pmt = db.query(Payment).filter(Payment.txn_ref == txn_ref).first()
-        if existing_pmt:
+        q = db.query(Payment).filter(Payment.txn_ref == txn_ref)
+        if exclude_payment_id:
+            q = q.filter(Payment.id != exclude_payment_id)
+        existing_pmt = q.first()
+        if existing_pmt and existing_pmt.match_status != "Invalid":
             return True, False, existing_pmt.id, f"Duplicate txn_ref '{txn_ref}' already recorded (payment #{existing_pmt.id})"
 
     # 2. Suspected duplicate (no txn_ref): same student_ref + same amount + same method within 24 hours
     if not txn_ref and student_ref:
         # Check within +/- 1 day in DB
-        candidate = (
+        q = (
             db.query(Payment)
             .filter(
                 Payment.student_ref == student_ref,
@@ -167,9 +172,11 @@ def check_duplicate(
                 Payment.payment_date >= (payment_date - timedelta(days=1)),
                 Payment.payment_date <= (payment_date + timedelta(days=1)),
             )
-            .first()
         )
-        if candidate:
+        if exclude_payment_id:
+            q = q.filter(Payment.id != exclude_payment_id)
+        candidate = q.first()
+        if candidate and candidate.match_status != "Invalid":
             return False, True, candidate.id, "Suspected duplicate: identical student, amount, and method within 24 hours"
 
     return False, False, None, None
@@ -180,6 +187,7 @@ def process_single_payment(
     raw_row: Dict[str, Any],
     batch_id: Optional[int] = None,
     seen_txn_refs: Optional[Dict[str, int]] = None,
+    existing_payment_id: Optional[int] = None,
 ) -> Payment:
     """
     Executes the 5-step payment processing pipeline:
@@ -192,11 +200,46 @@ def process_single_payment(
     if seen_txn_refs is None:
         seen_txn_refs = {}
 
+    existing_payment = None
+    if existing_payment_id is not None:
+        existing_payment = db.query(Payment).filter(Payment.id == existing_payment_id).first()
+
     # Step 1 - Normalize and validate
     norm_data, invalid_reason = normalize_payment_row(raw_row)
 
     if invalid_reason is not None:
         # Invalid payment row
+        if existing_payment:
+            existing_payment.txn_ref = norm_data["txn_ref"]
+            existing_payment.student_ref = norm_data["student_ref"]
+            existing_payment.invoice_ref = norm_data["invoice_ref"]
+            existing_payment.payer_name = norm_data["payer_name"]
+            existing_payment.amount = norm_data["amount"]
+            existing_payment.method = norm_data["method"]
+            existing_payment.payment_date = norm_data["payment_date"]
+            existing_payment.match_status = "Invalid"
+            existing_payment.confidence_score = 0
+            existing_payment.match_reason = f"Validation failed: {invalid_reason}"
+            
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == existing_payment.id).first()
+            if exc:
+                exc.reason_code = "INVALID_ROW"
+                exc.detail = invalid_reason
+                exc.suggested_action = "Correct data format or supply required fields and re-import"
+                exc.resolved = False
+                exc.resolution_note = None
+            else:
+                exc = ExceptionRecord(
+                    payment_id=existing_payment.id,
+                    reason_code="INVALID_ROW",
+                    detail=invalid_reason,
+                    suggested_action="Correct data format or supply required fields and re-import",
+                    resolved=False,
+                )
+                db.add(exc)
+            db.flush()
+            return existing_payment
+
         payment = Payment(
             txn_ref=norm_data["txn_ref"],
             student_ref=norm_data["student_ref"],
@@ -234,10 +277,47 @@ def process_single_payment(
 
     # Step 2 - Duplicate detection (before matching)
     is_exact_dup, is_suspected_dup, orig_id, dup_note = check_duplicate(
-        db, txn_ref, student_ref, amount, method, payment_date, seen_txn_refs
+        db,
+        txn_ref,
+        student_ref,
+        amount,
+        method,
+        payment_date,
+        seen_txn_refs,
+        exclude_payment_id=existing_payment.id if existing_payment else None,
     )
 
     if is_exact_dup:
+        if existing_payment:
+            existing_payment.txn_ref = txn_ref
+            existing_payment.student_ref = student_ref
+            existing_payment.invoice_ref = invoice_ref
+            existing_payment.payer_name = payer_name
+            existing_payment.amount = amount
+            existing_payment.method = method
+            existing_payment.payment_date = payment_date
+            existing_payment.match_status = "Duplicate"
+            existing_payment.confidence_score = 100
+            existing_payment.match_reason = dup_note
+
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == existing_payment.id).first()
+            if exc:
+                exc.reason_code = "DUPLICATE"
+                exc.detail = dup_note or f"Duplicate txn_ref #{orig_id}"
+                exc.suggested_action = "Mark as duplicate or dismiss"
+                exc.resolved = False
+            else:
+                exc = ExceptionRecord(
+                    payment_id=existing_payment.id,
+                    reason_code="DUPLICATE",
+                    detail=dup_note or f"Duplicate txn_ref #{orig_id}",
+                    suggested_action="Mark as duplicate or dismiss",
+                    resolved=False,
+                )
+                db.add(exc)
+            db.flush()
+            return existing_payment
+
         payment = Payment(
             txn_ref=txn_ref,
             student_ref=student_ref,
@@ -266,6 +346,36 @@ def process_single_payment(
         return payment
 
     if is_suspected_dup:
+        if existing_payment:
+            existing_payment.txn_ref = txn_ref
+            existing_payment.student_ref = student_ref
+            existing_payment.invoice_ref = invoice_ref
+            existing_payment.payer_name = payer_name
+            existing_payment.amount = amount
+            existing_payment.method = method
+            existing_payment.payment_date = payment_date
+            existing_payment.match_status = "Review"
+            existing_payment.confidence_score = 70
+            existing_payment.match_reason = dup_note
+
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == existing_payment.id).first()
+            if exc:
+                exc.reason_code = "DUPLICATE"
+                exc.detail = dup_note or "Suspected duplicate payment"
+                exc.suggested_action = "Review and confirm if payment was legitimate repeat"
+                exc.resolved = False
+            else:
+                exc = ExceptionRecord(
+                    payment_id=existing_payment.id,
+                    reason_code="DUPLICATE",
+                    detail=dup_note or "Suspected duplicate payment",
+                    suggested_action="Review and confirm if payment was legitimate repeat",
+                    resolved=False,
+                )
+                db.add(exc)
+            db.flush()
+            return existing_payment
+
         payment = Payment(
             txn_ref=txn_ref,
             student_ref=student_ref,
@@ -303,23 +413,47 @@ def process_single_payment(
     )
 
     # Step 4 & 5 - Amount comparison, Allocation, and Scoring
-    payment = Payment(
-        txn_ref=txn_ref,
-        student_ref=student_ref,
-        invoice_ref=invoice_ref,
-        payer_name=payer_name,
-        amount=amount,
-        method=method,
-        payment_date=payment_date,
-        match_status=match_result.status,
-        matched_student_id=match_result.student.student_id if match_result.student else None,
-        matched_invoice_id=match_result.invoice.invoice_id if match_result.invoice else None,
-        confidence_score=match_result.confidence_score,
-        match_reason=match_result.match_reason,
-        batch_id=batch_id,
-    )
-    db.add(payment)
-    db.flush()
+    if existing_payment:
+        # Clear prior allocations if any
+        old_allocs = list(existing_payment.allocations)
+        for old_a in old_allocs:
+            inv = old_a.invoice
+            db.delete(old_a)
+            db.flush()
+            if inv:
+                recalculate_invoice_status(db, inv)
+
+        existing_payment.txn_ref = txn_ref
+        existing_payment.student_ref = student_ref
+        existing_payment.invoice_ref = invoice_ref
+        existing_payment.payer_name = payer_name
+        existing_payment.amount = amount
+        existing_payment.method = method
+        existing_payment.payment_date = payment_date
+        existing_payment.match_status = match_result.status
+        existing_payment.matched_student_id = match_result.student.student_id if match_result.student else None
+        existing_payment.matched_invoice_id = match_result.invoice.invoice_id if match_result.invoice else None
+        existing_payment.confidence_score = match_result.confidence_score
+        existing_payment.match_reason = match_result.match_reason
+        payment = existing_payment
+    else:
+        payment = Payment(
+            txn_ref=txn_ref,
+            student_ref=student_ref,
+            invoice_ref=invoice_ref,
+            payer_name=payer_name,
+            amount=amount,
+            method=method,
+            payment_date=payment_date,
+            match_status=match_result.status,
+            matched_student_id=match_result.student.student_id if match_result.student else None,
+            matched_invoice_id=match_result.invoice.invoice_id if match_result.invoice else None,
+            confidence_score=match_result.confidence_score,
+            match_reason=match_result.match_reason,
+            batch_id=batch_id,
+        )
+        db.add(payment)
+        db.flush()
 
     # Track seen txn_ref
     if txn_ref:
@@ -327,14 +461,22 @@ def process_single_payment(
 
     # Handle Review or Unmatched matches (NEVER auto-apply)
     if match_result.status in ("Review", "Unmatched"):
-        exc = ExceptionRecord(
-            payment_id=payment.id,
-            reason_code=match_result.exception_code or "UNMATCHED",
-            detail=match_result.exception_detail or match_result.match_reason,
-            suggested_action=match_result.suggested_action or "Review transaction and manually reconcile",
-            resolved=False,
-        )
-        db.add(exc)
+        exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+        if exc:
+            exc.reason_code = match_result.exception_code or "UNMATCHED"
+            exc.detail = match_result.exception_detail or match_result.match_reason
+            exc.suggested_action = match_result.suggested_action or "Review transaction and manually reconcile"
+            exc.resolved = False
+            exc.resolution_note = None
+        else:
+            exc = ExceptionRecord(
+                payment_id=payment.id,
+                reason_code=match_result.exception_code or "UNMATCHED",
+                detail=match_result.exception_detail or match_result.match_reason,
+                suggested_action=match_result.suggested_action or "Review transaction and manually reconcile",
+                resolved=False,
+            )
+            db.add(exc)
         db.flush()
         return payment
 
@@ -350,6 +492,11 @@ def process_single_payment(
             db.add(alloc)
             db.flush()
             recalculate_invoice_status(db, inv)
+            if existing_payment:
+                db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).update({
+                    "resolved": True,
+                    "resolution_note": "Payment re-entered and reconciled successfully",
+                })
 
         elif amount < outstanding:
             payment.match_status = "Partial"
@@ -358,14 +505,22 @@ def process_single_payment(
             db.flush()
             recalculate_invoice_status(db, inv)
             rem = outstanding - amount
-            exc = ExceptionRecord(
-                payment_id=payment.id,
-                reason_code="PARTIAL",
-                detail=f"Partial payment received: {format_rupees(amount)}. Remaining balance on {inv.invoice_id}: {format_rupees(rem)}",
-                suggested_action="Accept partial payment or follow up for remaining balance",
-                resolved=False,
-            )
-            db.add(exc)
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+            if exc:
+                exc.reason_code = "PARTIAL"
+                exc.detail = f"Partial payment received: {format_rupees(amount)}. Remaining balance on {inv.invoice_id}: {format_rupees(rem)}"
+                exc.suggested_action = "Accept partial payment or follow up for remaining balance"
+                exc.resolved = False
+                exc.resolution_note = None
+            else:
+                exc = ExceptionRecord(
+                    payment_id=payment.id,
+                    reason_code="PARTIAL",
+                    detail=f"Partial payment received: {format_rupees(amount)}. Remaining balance on {inv.invoice_id}: {format_rupees(rem)}",
+                    suggested_action="Accept partial payment or follow up for remaining balance",
+                    resolved=False,
+                )
+                db.add(exc)
             db.flush()
 
         else:  # amount > outstanding
@@ -377,14 +532,22 @@ def process_single_payment(
                 db.flush()
                 recalculate_invoice_status(db, inv)
             excess = amount - applied
-            exc = ExceptionRecord(
-                payment_id=payment.id,
-                reason_code="OVERPAID",
-                detail=f"Overpaid by {format_rupees(excess)}: Invoice {inv.invoice_id} Amount = {format_rupees(inv.amount_due)} (Applied: {format_rupees(applied)}), Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(excess)}.",
-                suggested_action="Refund excess amount or allocate to subsequent invoice",
-                resolved=False,
-            )
-            db.add(exc)
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+            if exc:
+                exc.reason_code = "OVERPAID"
+                exc.detail = f"Overpaid by {format_rupees(excess)}: Invoice {inv.invoice_id} Amount = {format_rupees(inv.amount_due)} (Applied: {format_rupees(applied)}), Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(excess)}."
+                exc.suggested_action = "Refund excess amount or allocate to subsequent invoice"
+                exc.resolved = False
+                exc.resolution_note = None
+            else:
+                exc = ExceptionRecord(
+                    payment_id=payment.id,
+                    reason_code="OVERPAID",
+                    detail=f"Overpaid by {format_rupees(excess)}: Invoice {inv.invoice_id} Amount = {format_rupees(inv.amount_due)} (Applied: {format_rupees(applied)}), Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(excess)}.",
+                    suggested_action="Refund excess amount or allocate to subsequent invoice",
+                    resolved=False,
+                )
+                db.add(exc)
             db.flush()
 
     elif match_result.student:
@@ -393,14 +556,22 @@ def process_single_payment(
         if not open_invoices:
             # Student has no open invoices! Entire amount is Overpaid
             payment.match_status = "Overpaid"
-            exc = ExceptionRecord(
-                payment_id=payment.id,
-                reason_code="OVERPAID",
-                detail=f"Student {match_result.student.student_id} has no open invoices. Entire amount {format_rupees(amount)} is excess.",
-                suggested_action="Refund payment or retain as advance deposit",
-                resolved=False,
-            )
-            db.add(exc)
+            exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+            if exc:
+                exc.reason_code = "OVERPAID"
+                exc.detail = f"Student {match_result.student.student_id} has no open invoices. Entire amount {format_rupees(amount)} is excess."
+                exc.suggested_action = "Refund payment or retain as advance deposit"
+                exc.resolved = False
+                exc.resolution_note = None
+            else:
+                exc = ExceptionRecord(
+                    payment_id=payment.id,
+                    reason_code="OVERPAID",
+                    detail=f"Student {match_result.student.student_id} has no open invoices. Entire amount {format_rupees(amount)} is excess.",
+                    suggested_action="Refund payment or retain as advance deposit",
+                    resolved=False,
+                )
+                db.add(exc)
             db.flush()
         else:
             remaining_amount = amount
@@ -426,29 +597,50 @@ def process_single_payment(
                 # All open invoices paid, still excess left
                 payment.match_status = "Overpaid"
                 total_applied = amount - remaining_amount
-                exc = ExceptionRecord(
-                    payment_id=payment.id,
-                    reason_code="OVERPAID",
-                    detail=f"Overpaid by {format_rupees(remaining_amount)}: Total Applied across open invoices = {format_rupees(total_applied)}, Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(remaining_amount)}.",
-                    suggested_action="Refund excess or hold as credit for future semester",
-                    resolved=False,
-                )
-                db.add(exc)
+                exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+                if exc:
+                    exc.reason_code = "OVERPAID"
+                    exc.detail = f"Overpaid by {format_rupees(remaining_amount)}: Total Applied across open invoices = {format_rupees(total_applied)}, Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(remaining_amount)}."
+                    exc.suggested_action = "Refund excess or hold as credit for future semester"
+                    exc.resolved = False
+                    exc.resolution_note = None
+                else:
+                    exc = ExceptionRecord(
+                        payment_id=payment.id,
+                        reason_code="OVERPAID",
+                        detail=f"Overpaid by {format_rupees(remaining_amount)}: Total Applied across open invoices = {format_rupees(total_applied)}, Payment Received = {format_rupees(amount)}. Exact Overpaid Amount = {format_rupees(remaining_amount)}.",
+                        suggested_action="Refund excess or hold as credit for future semester",
+                        resolved=False,
+                    )
+                    db.add(exc)
                 db.flush()
             elif last_allocated_invoice and last_allocated_invoice.outstanding_amount > 0:
                 # Last invoice has remaining balance
                 payment.match_status = "Partial"
-                exc = ExceptionRecord(
-                    payment_id=payment.id,
-                    reason_code="PARTIAL",
-                    detail=f"Partial payment applied. Invoice {last_allocated_invoice.invoice_id} has {format_rupees(last_allocated_invoice.outstanding_amount)} outstanding balance.",
-                    suggested_action="Accept partial payment or request balance",
-                    resolved=False,
-                )
-                db.add(exc)
+                exc = db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).first() if existing_payment else None
+                if exc:
+                    exc.reason_code = "PARTIAL"
+                    exc.detail = f"Partial payment applied. Invoice {last_allocated_invoice.invoice_id} has {format_rupees(last_allocated_invoice.outstanding_amount)} outstanding balance."
+                    exc.suggested_action = "Accept partial payment or request balance"
+                    exc.resolved = False
+                    exc.resolution_note = None
+                else:
+                    exc = ExceptionRecord(
+                        payment_id=payment.id,
+                        reason_code="PARTIAL",
+                        detail=f"Partial payment applied. Invoice {last_allocated_invoice.invoice_id} has {format_rupees(last_allocated_invoice.outstanding_amount)} outstanding balance.",
+                        suggested_action="Accept partial payment or request balance",
+                        resolved=False,
+                    )
+                    db.add(exc)
                 db.flush()
             else:
                 payment.match_status = "Matched"
+                if existing_payment:
+                    db.query(ExceptionRecord).filter(ExceptionRecord.payment_id == payment.id).update({
+                        "resolved": True,
+                        "resolution_note": "Payment re-entered and reconciled successfully",
+                    })
 
     db.flush()
     db.refresh(payment)

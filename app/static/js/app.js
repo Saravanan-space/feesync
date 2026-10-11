@@ -1839,6 +1839,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalPmt = document.getElementById("modal-payment-overlay");
     if (!modalPmt) return;
 
+    closeAllPopoversAndDrawers();
+
+    const titleEl = document.getElementById("modal-pmt-title");
+    if (titleEl) titleEl.textContent = `Re-enter Payment #${exc.payment_id || pmt.id || exc.id}`;
+
+    const reenterInp = document.getElementById("inp-pmt-reenter-id");
+    if (reenterInp) reenterInp.value = pmt.id || exc.payment_id || "";
+
+    const excInp = document.getElementById("inp-pmt-exception-id");
+    if (excInp) excInp.value = exc.id || "";
+
     const inpTxn = document.getElementById("inp-pmt-txn");
     const inpMethod = document.getElementById("inp-pmt-method");
     const inpStudent = document.getElementById("inp-pmt-student");
@@ -2463,10 +2474,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const formManualPayment = document.getElementById("form-manual-payment");
 
   if (btnManualEntry && modalManualPmt) {
-    btnManualEntry.addEventListener("click", () => modalManualPmt.classList.add("active"));
+    btnManualEntry.addEventListener("click", () => {
+      const titleEl = document.getElementById("modal-pmt-title");
+      if (titleEl) titleEl.textContent = "Record Manual Payment";
+      const reenterInp = document.getElementById("inp-pmt-reenter-id");
+      if (reenterInp) reenterInp.value = "";
+      const excInp = document.getElementById("inp-pmt-exception-id");
+      if (excInp) excInp.value = "";
+      if (formManualPayment) formManualPayment.reset();
+      const inpDate = document.getElementById("inp-pmt-date");
+      if (inpDate) inpDate.value = new Date().toISOString().split("T")[0];
+      modalManualPmt.classList.add("active");
+    });
   }
-  if (btnCancelPmt && modalManualPmt) btnCancelPmt.onclick = () => modalManualPmt.classList.remove("active");
-  if (btnClosePmt && modalManualPmt) btnClosePmt.onclick = () => modalManualPmt.classList.remove("active");
+  if (btnCancelPmt && modalManualPmt) {
+    btnCancelPmt.onclick = () => {
+      modalManualPmt.classList.remove("active");
+      const reenterInp = document.getElementById("inp-pmt-reenter-id");
+      if (reenterInp) reenterInp.value = "";
+      const excInp = document.getElementById("inp-pmt-exception-id");
+      if (excInp) excInp.value = "";
+    };
+  }
+  if (btnClosePmt && modalManualPmt) {
+    btnClosePmt.onclick = () => {
+      modalManualPmt.classList.remove("active");
+      const reenterInp = document.getElementById("inp-pmt-reenter-id");
+      if (reenterInp) reenterInp.value = "";
+      const excInp = document.getElementById("inp-pmt-exception-id");
+      if (excInp) excInp.value = "";
+    };
+  }
 
   if (formManualPayment) {
     formManualPayment.addEventListener("submit", async (e) => {
@@ -2478,6 +2516,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const payerName = document.getElementById("inp-pmt-payer").value.trim() || null;
       const amountRupees = parseFloat(document.getElementById("inp-pmt-amount").value);
       const dateVal = document.getElementById("inp-pmt-date").value;
+      const reenterIdVal = document.getElementById("inp-pmt-reenter-id") ? document.getElementById("inp-pmt-reenter-id").value : "";
+      const excIdVal = document.getElementById("inp-pmt-exception-id") ? document.getElementById("inp-pmt-exception-id").value : "";
 
       if (isNaN(amountRupees) || amountRupees <= 0) {
         showToast("Please enter a valid payment amount", "warning");
@@ -2485,7 +2525,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       try {
-        const amountPaise = Math.round(amountRupees * 100);
         await apiFetch("/api/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -2495,14 +2534,21 @@ document.addEventListener("DOMContentLoaded", () => {
             student_ref: studentRef,
             invoice_ref: invoiceRef,
             payer_name: payerName,
-            amount: amountPaise,
+            amount: amountRupees,
             payment_date: dateVal,
+            reenter_payment_id: reenterIdVal ? parseInt(reenterIdVal) : null,
+            reenter_exception_id: excIdVal ? parseInt(excIdVal) : null,
           }),
         });
 
-        showToast("Payment recorded and reconciled successfully");
+        showToast(reenterIdVal ? "Payment updated and reconciled successfully" : "Payment recorded and reconciled successfully");
         if (modalManualPmt) modalManualPmt.classList.remove("active");
         formManualPayment.reset();
+        const reenterInp = document.getElementById("inp-pmt-reenter-id");
+        if (reenterInp) reenterInp.value = "";
+        const excInp = document.getElementById("inp-pmt-exception-id");
+        if (excInp) excInp.value = "";
+        closeAllPopoversAndDrawers();
         await loadViewData(state.currentView);
       } catch {
         // Handled in apiFetch
