@@ -1,0 +1,2 @@
+txn_ref,student_ref,invoice_ref,payer_name,amount,method,payment_date
+TXN2026100404,1KS25AI104,INV-004,Ananya Iyer,25000,CHEQUE,2026-10-03

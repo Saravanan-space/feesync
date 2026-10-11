@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FeeReconcile | Institutional Fee Obligations & Automated Reconciliation Engine</title>
+  <meta name="description" content="Automated fee reconciliation engine matching bank payments with student fee obligations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="theme-light">
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 3h12M6 8h12M6 13l7.5 8M6 13h4.5a4.5 4.5 0 0 0 0-9"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h2>FeeReconcile</h2>
+          <span>Automated Fee Engine</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="9" x="3" y="3" rx="1"/>
+            <rect width="7" height="5" x="14" y="3" rx="1"/>
+            <rect width="7" height="9" x="14" y="12" rx="1"/>
+            <rect width="7" height="5" x="3" y="16" rx="1"/>
+          </svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" data-view="obligations" id="nav-obligations">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Fee Obligations</span>
+        </button>
+
+        <button class="nav-item" data-view="payments" id="nav-payments">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+          <span>Payments</span>
+        </button>
+
+        <button class="nav-item" data-view="reconciliation" id="nav-reconciliation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+            <path d="M7 21h10"/>
+            <path d="M12 3v18"/>
+            <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>
+          </svg>
+          <span>Reconciliation</span>
+        </button>
+
+        <button class="nav-item" data-view="exceptions" id="nav-exceptions">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" x2="12" y1="9" y2="13"/>
+            <line x1="12" x2="12.01" y1="17" y2="17"/>
+          </svg>
+          <span>Exceptions</span>
+          <span class="badge-count" id="sidebar-exceptions-badge" style="display:none">0</span>
+        </button>
+
+        <button class="nav-item" data-view="reports" id="nav-reports">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="m19 9-5 5-4-4-3 3"/>
+          </svg>
+          <span>Reports</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-demo-wrapper">
+          <button class="sidebar-demo-trigger" id="btn-sidebar-demo-menu" aria-haspopup="true" aria-expanded="false">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Demo data</span>
+            <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="demo-popover-menu" id="demo-popover-menu" style="display:none;">
+            <button class="popover-item" id="btn-sidebar-load-demo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              Load demo data
+            </button>
+            <button class="popover-item text-danger" id="btn-sidebar-reset-db">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              Reset database
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WRAPPER -->
+    <div class="main-wrapper">
+      <!-- TOP BAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="hamburger-btn" id="btn-hamburger" aria-label="Toggle menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </button>
+          <div class="page-title-box">
+            <h1 id="page-title">Dashboard</h1>
+            <span class="sub-breadcrumb" id="page-subtitle">College fee reconciliation overview</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <button class="btn btn-sm btn-outline-secondary btn-header-export" id="btn-header-export-csv" style="display:none;" aria-label="Export CSV">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Export CSV
+          </button>
+
+          <button class="theme-toggle-btn" id="btn-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- GLOBAL ERROR BANNER (FOR NETWORK/SERVER ISSUES) -->
+      <div class="error-banner" id="global-error-banner" style="display:none">
+        <div class="error-banner-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <span id="global-error-text">Failed to connect to backend server.</span>
+        </div>
+        <button class="btn btn-sm btn-outline-light" id="btn-global-retry">Retry</button>
+      </div>
+
+      <!-- MAIN VIEWS CONTAINER -->
+      <main class="content-container">
+
+        <!-- ================= PAGE 1: DASHBOARD ================= -->
+        <section class="view-section active" id="view-dashboard">
+          <!-- KPI CARDS -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Total Fee Due</span>
+                <div class="kpi-icon icon-indigo">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-total-due">₹0.00</div>
+              <div class="kpi-footer">Across <span id="kpi-total-invoices">0</span> student invoices</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Total Received</span>
+                <div class="kpi-icon icon-green">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value text-success" id="kpi-total-received">₹0.00</div>
+              <div class="kpi-footer">Reconciled payments</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Outstanding Balance</span>
+                <div class="kpi-icon icon-red">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value text-danger" id="kpi-total-outstanding">₹0.00</div>
+              <div class="kpi-footer">Uncollected fees</div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-label">Collection Rate</span>
+                <div class="kpi-icon icon-amber">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-collection-rate">0.0%</div>
+              <div class="kpi-progress-bar">
+                <div class="progress-fill" id="kpi-collection-progress" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHARTS SECTION -->
+          <div class="dashboard-charts-grid">
+            <div class="card chart-card">
+              <div class="card-header">
+                <h3>Invoice Status Distribution</h3>
+                <span class="badge badge-pill badge-neutral">Invoices</span>
+              </div>
+              <div class="card-body chart-body">
+                <div class="chart-container" id="donut-chart-container">
+                  <svg id="donut-svg" width="220" height="220" viewBox="0 0 220 220"></svg>
+                  <div class="donut-center-text">
+                    <span class="donut-center-val" id="donut-center-total">0</span>
+                    <span class="donut-center-lbl">Invoices</span>
+                  </div>
+                </div>
+                <div class="chart-legend" id="donut-legend"></div>
+              </div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="card-header">
+                <h3>Payments by Match Status</h3>
+                <span class="badge badge-pill badge-neutral">Reconciliation</span>
+              </div>
+              <div class="card-body chart-body">
+                <div class="bar-chart-container" id="bar-chart-container">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DASHBOARD LOWER SECTION: BATCHES & EXCEPTION BANNER -->
+          <div class="dashboard-bottom-grid">
+            <div class="card">
+              <div class="card-header">
+                <h3>Exceptions Awaiting Action</h3>
+                <button class="btn btn-sm btn-outline-primary" id="btn-dash-view-exceptions">View Queue</button>
+              </div>
+              <div class="card-body">
+                <div class="exceptions-summary-pills" id="dash-exceptions-pills">
+                  <!-- Filled dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Recent Reconciliation Import Batches</h3>
+                <button class="btn btn-sm btn-outline-primary" id="btn-dash-go-payments">Upload Payments</button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Batch ID</th>
+                        <th>Filename</th>
+                        <th>Total Rows</th>
+                        <th>Matched</th>
+                        <th>Exceptions</th>
+                        <th>Date</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dash-batches-tbody">
+                      <tr><td colspan="6" class="text-center text-muted py-4">No import batches recorded yet. Click "Load Demo Data" to populate.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PAGE 2: FEE OBLIGATIONS ================= -->
+        <section class="view-section" id="view-obligations">
+          <div class="view-header-bar">
+            <div class="tab-pills">
+              <button class="tab-pill active" id="tab-btn-students" data-tab="students">Students Registry</button>
+              <button class="tab-pill" id="tab-btn-invoices" data-tab="invoices">Fee Invoices</button>
+            </div>
+            <div class="header-action-group" id="students-actions">
+              <button class="btn btn-outline-secondary" id="btn-import-students">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Import CSV
+              </button>
+              <button class="btn btn-secondary" id="btn-add-student">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                Add student
+              </button>
+            </div>
+            <div class="header-action-group" id="invoices-actions" style="display:none">
+              <button class="btn btn-outline-secondary" id="btn-import-invoices">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Import CSV
+              </button>
+              <button class="btn btn-secondary" id="btn-add-invoice">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                Add invoice
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT: STUDENTS -->
+          <div class="tab-content-panel active" id="tab-panel-students">
+            <div class="filter-bar">
+              <div class="search-input-wrapper">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="students-search-input" placeholder="Search by student ID, name, email...">
+              </div>
+              <span class="records-count" id="students-count-text">0 students</span>
+            </div>
+
+            <div class="card p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Student ID</th>
+                      <th>Student Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th class="text-right">Total Due</th>
+                      <th class="text-right">Total Paid</th>
+                      <th class="text-right">Outstanding</th>
+                      <th class="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="students-tbody">
+                    <!-- Populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT: INVOICES -->
+          <div class="tab-content-panel" id="tab-panel-invoices">
+            <div class="filter-bar">
+              <div class="search-input-wrapper">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="invoices-search-input" placeholder="Search invoice ID, student ID, description...">
+              </div>
+              <div class="filter-select-wrapper">
+                <select id="invoices-status-filter">
+                  <option value="">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Partial">Partial</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Overpaid">Overpaid</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
+              <span class="records-count" id="invoices-count-text">0 invoices</span>
+            </div>
+
+            <div class="card p-0">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice ID</th>
+                      <th>Student</th>
+                      <th>Description</th>
+                      <th>Due Date</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-right">Amount Due</th>
+                      <th class="text-right">Paid</th>
+                      <th class="text-right">Outstanding</th>
+                      <th class="text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="invoices-tbody">
+                    <!-- Populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PAGE 3: PAYMENTS ================= -->
+        <section class="view-section" id="view-payments">
+          <!-- PAYMENTS UPLOAD HERO ZONE -->
+          <div class="upload-hero-card">
+            <div class="upload-dropzone" id="payments-dropzone">
+              <input type="file" id="payments-file-input" accept=".csv" style="display:none">
+              <div class="dropzone-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+              </div>
+              <h3>Drag and drop payments CSV file here</h3>
+              <p>Supports bank statements, UPI feeds, NEFT logs (UTF-8, Latin-1, up to 5 MB)</p>
+              <div class="dropzone-btn-row">
+                <button class="btn btn-secondary" id="btn-browse-payments">Select CSV file</button>
+                <a href="#" class="template-link" id="link-download-template">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                  Download sample CSV template
+                </a>
+              </div>
+            </div>
+
+            <div class="manual-entry-banner">
+              <div>
+                <h4>Single transaction?</h4>
+                <p>Record a cash receipt, counter DD, or manual bank payment directly into the pipeline.</p>
+              </div>
+              <button class="btn btn-outline-secondary" id="btn-manual-payment-entry">Manual entry</button>
+            </div>
+          </div>
+
+          <!-- PAYMENTS LEDGER TABLE -->
+          <div class="filter-bar mt-4">
+            <div class="search-input-wrapper">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="payments-search-input" placeholder="Search txn_ref, student_ref, payer name...">
+            </div>
+            <div class="filter-select-wrapper">
+              <select id="payments-status-filter">
+                <option value="">All Match Statuses</option>
+                <option value="Matched">Matched</option>
+                <option value="Partial">Partial</option>
+                <option value="Review">Review</option>
+                <option value="Duplicate">Duplicate</option>
+                <option value="Overpaid">Overpaid</option>
+                <option value="Unmatched">Unmatched</option>
+                <option value="Invalid">Invalid</option>
+              </select>
+            </div>
+            <div class="filter-select-wrapper">
+              <select id="payments-method-filter">
+                <option value="">All Payment Methods</option>
+                <option value="UPI">UPI</option>
+                <option value="NEFT">NEFT</option>
+                <option value="CHEQUE">CHEQUE</option>
+                <option value="DD">DD</option>
+                <option value="CASH">CASH</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+            </div>
+            <span class="records-count" id="payments-count-text">0 payments</span>
+          </div>
+
+          <div class="card p-0">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Txn ref</th>
+                    <th>Date</th>
+                    <th>Payer / student ID</th>
+                    <th>Method</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-center">Match status</th>
+                    <th>Confidence</th>
+                    <th>Match reason</th>
+                    <th class="text-center">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="payments-tbody">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PAGE 4: RECONCILIATION ================= -->
+        <section class="view-section" id="view-reconciliation">
+          <div class="reconciliation-summary-strip" id="recon-summary-strip">
+            <div class="strip-item matched">
+              <span class="strip-count" id="recon-count-matched">0</span>
+              <span class="strip-label">Matched</span>
+            </div>
+            <div class="strip-item partial">
+              <span class="strip-count" id="recon-count-partial">0</span>
+              <span class="strip-label">Partial</span>
+            </div>
+            <div class="strip-item review">
+              <span class="strip-count" id="recon-count-review">0</span>
+              <span class="strip-label">Review</span>
+            </div>
+            <div class="strip-item duplicate">
+              <span class="strip-count" id="recon-count-duplicate">0</span>
+              <span class="strip-label">Duplicate</span>
+            </div>
+            <div class="strip-item overpaid">
+              <span class="strip-count" id="recon-count-overpaid">0</span>
+              <span class="strip-label">Overpaid</span>
+            </div>
+            <div class="strip-item unmatched">
+              <span class="strip-count" id="recon-count-unmatched">0</span>
+              <span class="strip-label">Unmatched</span>
+            </div>
+            <div class="strip-item invalid">
+              <span class="strip-count" id="recon-count-invalid">0</span>
+              <span class="strip-label">Invalid</span>
+            </div>
+          </div>
+
+          <div class="card p-0 mt-4">
+            <div class="card-header">
+              <div>
+                <h3>Reconciliation Cascade Ledger</h3>
+                <span class="text-muted text-sm">Automated rule engine ledger with real-time confidence scoring</span>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Txn ref</th>
+                    <th>Payer</th>
+                    <th>Student / invoice ID</th>
+                    <th class="text-right">Amount</th>
+                    <th class="text-center">Decision status</th>
+                    <th>Confidence score</th>
+                    <th>Decision explanation</th>
+                    <th class="text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="reconciliation-tbody">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PAGE 5: EXCEPTIONS ================= -->
+        <section class="view-section" id="view-exceptions">
+          <!-- Compact filter chips row (40px high, single row, horizontal scroll on mobile) -->
+          <div class="exception-filter-chips-row" id="exception-chips-row" role="tablist" aria-label="Filter exceptions by reason">
+            <button type="button" class="chip active" data-reason="" role="tab" aria-selected="true">
+              <span class="chip-dot dot-all"></span>
+              <span class="chip-label">All</span>
+              <span class="chip-count" id="chip-count-all">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="AMBIGUOUS_MATCH" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-ambiguous" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+              <span class="chip-label">Ambiguous</span>
+              <span class="chip-count" id="chip-count-ambiguous">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="PARTIAL" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-partial" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              <span class="chip-label">Partial</span>
+              <span class="chip-count" id="chip-count-partial">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="DUPLICATE" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-duplicate" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <span class="chip-label">Duplicate</span>
+              <span class="chip-count" id="chip-count-duplicate">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="OVERPAID" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-overpaid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" x2="12" y1="16" y2="8"/></svg>
+              <span class="chip-label">Overpaid</span>
+              <span class="chip-count" id="chip-count-overpaid">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="UNMATCHED" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-unmatched" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></svg>
+              <span class="chip-label">Unmatched</span>
+              <span class="chip-count" id="chip-count-unmatched">0</span>
+            </button>
+            <button type="button" class="chip" data-reason="INVALID_ROW" role="tab" aria-selected="false">
+              <svg class="chip-icon icon-invalid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              <span class="chip-label">Invalid</span>
+              <span class="chip-count" id="chip-count-invalid">0</span>
+            </button>
+          </div>
+
+          <!-- Single Toolbar Row: Search on left (max-width 420px), Segmented Control on right -->
+          <div class="exceptions-toolbar">
+            <div class="search-input-wrapper exceptions-search-wrap">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="exceptions-search-input" placeholder="Search payer, transaction ID or student ID" aria-label="Search payer, transaction ID or student ID">
+              <span class="search-count-pill" id="exceptions-result-count" style="display:none">Showing 0 of 0</span>
+            </div>
+
+            <div class="segmented-control" id="exceptions-status-segment" role="group" aria-label="Filter status">
+              <button type="button" class="segment-btn active" id="tab-btn-open-exceptions" data-resolved="false">Open</button>
+              <button type="button" class="segment-btn" id="tab-btn-resolved-exceptions" data-resolved="true">Resolved</button>
+            </div>
+          </div>
+
+          <!-- 5-Column Table Card -->
+          <div class="card p-0 mt-3 exceptions-table-card">
+            <div class="table-responsive">
+              <table class="data-table exceptions-data-table" id="exceptions-table">
+                <thead>
+                  <tr>
+                    <th class="th-reason sortable" style="width: 14%;" data-sort="reason" tabindex="0" role="button" aria-label="Sort by reason">
+                      Reason <span class="sort-arrow" id="sort-arrow-reason"></span>
+                    </th>
+                    <th class="th-payment" style="width: 24%;">Payment</th>
+                    <th class="th-amount text-right sortable" style="width: 13%;" data-sort="amount" tabindex="0" role="button" aria-label="Sort by amount">
+                      Amount <span class="sort-arrow" id="sort-arrow-amount"></span>
+                    </th>
+                    <th class="th-issue" style="width: 33%;">Issue and next step</th>
+                    <th class="th-actions text-right" style="width: 16%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="exceptions-tbody">
+                  <!-- Populated dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PAGE 6: REPORTS ================= -->
+        <section class="view-section" id="view-reports">
+          <div class="view-header-bar no-print">
+            <div>
+              <h2>Audit and reconciliation report</h2>
+              <p class="text-muted">Consolidated fee obligations and payments audit ledger</p>
+            </div>
+            <div class="header-action-group">
+              <button class="btn btn-outline-secondary" id="btn-print-report">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                Print report
+              </button>
+              <a href="/api/reports/export/reconciliation.csv" download="reconciliation.csv" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Export reconciliation CSV
+              </a>
+            </div>
+          </div>
+
+          <div class="printable-report-wrapper" id="printable-area">
+            <div class="report-doc-container">
+              <!-- TOP DOCUMENT BANNER -->
+              <div class="report-doc-banner">
+                <h2>FeeReconcile — Executive &amp; Financial Progress Summary</h2>
+                <span class="report-date-badge">Date: <span id="report-timestamp">--</span></span>
+              </div>
+
+              <!-- SECTION 1: SPECIFICATIONS & PROFILE -->
+              <h3 class="report-section-title">1. Institutional Specifications &amp; Customer Profile</h3>
+              <div class="report-dual-grid">
+                <!-- Left Card: Institutional Specifications -->
+                <div class="report-table-card">
+                  <table class="report-table">
+                    <thead>
+                      <tr>
+                        <th class="th-dark-navy">Institutional specifications</th>
+                        <th class="th-dark-navy text-right">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Institution Name</strong></td>
+                        <td class="text-right">FeeReconcile Institutional Campus</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Academic Period</strong></td>
+                        <td class="text-right">AY 2026 – 2027</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Total Enrolled Students</strong></td>
+                        <td class="text-right font-semibold" id="rep-student-count">0</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Total Fee Invoices Issued</strong></td>
+                        <td class="text-right font-semibold" id="rep-invoice-count">0</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Total Agreement Fee Value</strong></td>
+                        <td class="text-right font-semibold" id="rep-contract-total">₹0.00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Right Card: Customer / Financial Profile -->
+                <div class="report-table-card">
+                  <table class="report-table">
+                    <thead>
+                      <tr>
+                        <th class="th-vibrant-blue">Collection profile</th>
+                        <th class="th-vibrant-blue text-right">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Total Realized Collections</strong></td>
+                        <td class="text-right text-success font-semibold" id="rep-profile-received">₹0.00</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Outstanding Balance</strong></td>
+                        <td class="text-right text-danger font-semibold" id="rep-profile-outstanding">₹0.00</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Realization Progress Rate</strong></td>
+                        <td class="text-right font-semibold" id="rep-profile-rate">0.0%</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Awaiting Review Count</strong></td>
+                        <td class="text-right font-semibold" id="rep-profile-review">0</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Open Exceptions Count</strong></td>
+                        <td class="text-right font-semibold" id="rep-profile-exceptions">0</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- SECTION 2: RECEIVABLE BREAKDOWN -->
+              <h3 class="report-section-title">2. Fee Realization &amp; Receivable Breakdown</h3>
+              <div class="report-table-card mb-4">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th class="th-dark-navy">Financial metric</th>
+                      <th class="th-dark-navy text-right">Value / amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Total Agreement Fee Value (100% Contract Total)</strong></td>
+                      <td class="text-right font-semibold" id="rep-total-due">₹0.00</td>
+                    </tr>
+                    <tr class="row-highlight-green">
+                      <td><strong>Total Realized Amount Received Till Date</strong></td>
+                      <td class="text-right text-success font-semibold" id="rep-total-received">₹0.00</td>
+                    </tr>
+                    <tr class="row-highlight-red">
+                      <td><strong class="text-danger">Balance Receivable Amount (Eligible - Received)</strong></td>
+                      <td class="text-right text-danger font-semibold" id="rep-total-outstanding">₹0.00</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Overall Realization Completion Stage</strong></td>
+                      <td class="text-right font-semibold" id="rep-collection-rate">0.0% Completed</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Overall Payment Account Status</strong></td>
+                      <td class="text-right font-semibold" id="rep-account-status">Pending Collections</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- SECTION 3: CHRONOLOGICAL RECEIVED PAYMENT LOG -->
+              <h3 class="report-section-title">3. Chronological Received Payment Log</h3>
+              <div class="report-table-card mb-4">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th class="th-royal-blue" style="width:90px;">S.No</th>
+                      <th class="th-royal-blue" style="width:130px;">Payment Date</th>
+                      <th class="th-royal-blue">Transaction Ref &amp; Payer Details</th>
+                      <th class="th-royal-blue text-center">Match Status</th>
+                      <th class="th-royal-blue text-right">Received Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rep-payments-log-tbody">
+                    <tr><td colspan="5" class="text-center text-muted py-3">No payments recorded yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- SECTION 4: EXCEPTION BREAKDOWN & AUDIT TRAIL -->
+              <h3 class="report-section-title">4. Reconciler Exceptions Audit Trail</h3>
+              <div class="report-table-card mb-4">
+                <table class="report-table">
+                  <thead>
+                    <tr>
+                      <th class="th-dark-navy">Exception Reason Code</th>
+                      <th class="th-dark-navy">Audit Description &amp; Category</th>
+                      <th class="th-dark-navy text-right">Open Records</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rep-exceptions-tbody">
+                    <tr><td colspan="3" class="text-center text-muted py-3">No open exceptions. All payments reconciled!</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+
+  <!-- PAYMENT DETAIL SLIDE-IN DRAWER -->
+  <div class="drawer-overlay" id="payment-drawer-overlay"></div>
+  <aside class="drawer" id="payment-drawer">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-title">Payment Details</h3>
+        <span class="text-muted text-sm" id="drawer-subtitle">Transaction ID</span>
+      </div>
+      <button class="drawer-close-btn" id="btn-close-drawer">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-content">
+      <!-- Injected dynamically -->
+    </div>
+  </aside>
+
+  <!-- ================= STUDENT DETAILS CARD MODAL ================= -->
+  <div class="modal-overlay" id="modal-student-detail-overlay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar-circle" id="detail-student-avatar">AS</div>
+          <div>
+            <h3 id="detail-student-name">Aarav Sharma</h3>
+            <span class="badge badge-neutral" id="detail-student-id">1KS25AI101</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btn-close-student-detail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- View Mode -->
+        <div id="student-view-mode">
+          <div class="metrics-strip mb-4" style="grid-template-columns:repeat(4, 1fr);">
+            <div class="metric-box">
+              <span class="metric-box-lbl">Total Obligations</span>
+              <span class="metric-box-val" id="detail-student-due">₹0.00</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-box-lbl">Total Realized</span>
+              <span class="metric-box-val text-success" id="detail-student-paid">₹0.00</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-box-lbl">Outstanding Balance</span>
+              <span class="metric-box-val text-danger" id="detail-student-outstanding">₹0.00</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-box-lbl" style="color:var(--primary);font-weight:700;">Advance Credit</span>
+              <span class="metric-box-val" style="color:var(--primary);font-weight:800;" id="detail-student-credit">₹0.00</span>
+            </div>
+          </div>
+
+          <div class="detail-info-grid mb-4">
+            <div class="info-item">
+              <span class="info-label">Email Address</span>
+              <span class="info-value" id="detail-student-email">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Phone Number</span>
+              <span class="info-value" id="detail-student-phone">-</span>
+            </div>
+          </div>
+
+          <div class="card p-0 mb-2">
+            <div class="card-header py-2 px-3">
+              <h4 style="font-size:13px;">Student Invoices & Obligations</h4>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" style="font-size:12.5px;">
+                <thead>
+                  <tr>
+                    <th>Invoice ID</th>
+                    <th>Description</th>
+                    <th>Due Date</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-right">Due</th>
+                    <th class="text-right">Paid</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-student-invoices-tbody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Mode (Inside the card) -->
+        <form id="student-edit-mode" style="display:none;">
+          <div class="form-group">
+            <label>Student Roll Number (Read-only)</label>
+            <input type="text" id="edit-student-id" disabled>
+          </div>
+          <div class="form-group">
+            <label for="edit-student-name">Full Name *</label>
+            <input type="text" id="edit-student-name" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-student-email">Email Address</label>
+            <input type="email" id="edit-student-email">
+          </div>
+          <div class="form-group">
+            <label for="edit-student-phone">Phone Number</label>
+            <input type="tel" id="edit-student-phone">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div id="student-view-footer-actions" style="display:flex;width:100%;justify-content:space-between;align-items:center;">
+          <button type="button" class="btn btn-outline-danger btn-sm" id="btn-detail-student-delete">Delete Student</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-outline-secondary" id="btn-detail-student-close">Close</button>
+            <button type="button" class="btn btn-primary" id="btn-detail-student-edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Student
+            </button>
+          </div>
+        </div>
+        <div id="student-edit-footer-actions" style="display:none;width:100%;justify-content:flex-end;gap:8px;">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-edit-student">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-save-edit-student">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= INVOICE DETAILS CARD MODAL ================= -->
+  <div class="modal-overlay" id="modal-invoice-detail-overlay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 id="detail-invoice-id">INV-001</h3>
+            <span class="badge" id="detail-invoice-status">Paid</span>
+          </div>
+          <span class="text-muted text-sm" id="detail-invoice-subtitle">Fee Obligation</span>
+        </div>
+        <button class="modal-close-btn" id="btn-close-invoice-detail">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- View Mode -->
+        <div id="invoice-view-mode">
+          <div class="metrics-strip mb-4">
+            <div class="metric-box">
+              <span class="metric-box-lbl">Amount Due</span>
+              <span class="metric-box-val" id="detail-invoice-due">₹0.00</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-box-lbl">Paid Amount</span>
+              <span class="metric-box-val text-success" id="detail-invoice-paid">₹0.00</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-box-lbl">Outstanding Balance</span>
+              <span class="metric-box-val text-danger" id="detail-invoice-outstanding">₹0.00</span>
+            </div>
+          </div>
+
+          <div id="detail-invoice-overpaid-banner" style="display:none;" class="mb-4"></div>
+
+          <div class="detail-info-grid mb-4">
+            <div class="info-item">
+              <span class="info-label">Description</span>
+              <span class="info-value" id="detail-invoice-desc">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Due Date</span>
+              <span class="info-value" id="detail-invoice-date">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Student ID</span>
+              <span class="info-value" id="detail-invoice-student-id">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Student Full Name</span>
+              <span class="info-value" id="detail-invoice-student-name">-</span>
+            </div>
+          </div>
+
+          <!-- Itemized Fee Heads Allocation Card -->
+          <div class="card p-0 mb-4" id="detail-invoice-fee-heads-card">
+            <div class="card-header py-2 px-3" style="background:var(--bg-subtle);">
+              <h4 style="font-size:12.5px;margin:0;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Itemized Fee Heads Priority Allocation</h4>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" style="font-size:12.5px;">
+                <thead>
+                  <tr>
+                    <th>Fee Head Category</th>
+                    <th class="text-center">Priority</th>
+                    <th class="text-right">Head Total</th>
+                    <th class="text-right">Amount Applied</th>
+                    <th class="text-center">Head Status</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-invoice-fee-heads-tbody">
+                  <!-- Populated dynamically via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card p-0 mb-2">
+            <div class="card-header py-2 px-3">
+              <h4 style="font-size:13px;">Reconciled Payment Allocations</h4>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" style="font-size:12.5px;">
+                <thead>
+                  <tr>
+                    <th>Payment Ref</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th class="text-right">Amount Applied</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-invoice-allocations-tbody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit Mode (Inside the card) -->
+        <form id="invoice-edit-mode" style="display:none;">
+          <div class="form-group">
+            <label>Invoice ID (Read-only)</label>
+            <input type="text" id="edit-invoice-id" disabled>
+          </div>
+          <div class="form-group">
+            <label>Student (Read-only)</label>
+            <input type="text" id="edit-invoice-student" disabled>
+          </div>
+          <div class="form-group">
+            <label for="edit-invoice-desc">Fee Description *</label>
+            <input type="text" id="edit-invoice-desc" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-invoice-amount">Amount Due (Rupees ₹) *</label>
+            <input type="number" id="edit-invoice-amount" required min="1" step="0.01">
+          </div>
+          <div class="form-group">
+            <label for="edit-invoice-date">Due Date *</label>
+            <input type="date" id="edit-invoice-date" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <div id="invoice-view-footer-actions" style="display:flex;width:100%;justify-content:space-between;align-items:center;">
+          <button type="button" class="btn btn-outline-danger btn-sm" id="btn-detail-invoice-delete">Delete Invoice</button>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-outline-secondary" id="btn-detail-invoice-close">Close</button>
+            <button type="button" class="btn btn-primary" id="btn-detail-invoice-edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Invoice
+            </button>
+          </div>
+        </div>
+        <div id="invoice-edit-footer-actions" style="display:none;width:100%;justify-content:flex-end;gap:8px;">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-edit-invoice">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-save-edit-invoice">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT STUDENT MODAL -->
+  <div class="modal-overlay" id="modal-student-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-student-title">Add Student</h3>
+        <button class="modal-close-btn" id="btn-close-student-modal">&times;</button>
+      </div>
+      <form id="form-student">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inp-student-id">Student ID (Unique, e.g. 1KS25AI109) *</label>
+            <input type="text" id="inp-student-id" required placeholder="1KS25AI109" uppercase>
+            <span class="form-error" id="err-student-id"></span>
+          </div>
+          <div class="form-group">
+            <label for="inp-student-name">Full Name *</label>
+            <input type="text" id="inp-student-name" required placeholder="Aarav Sharma">
+            <span class="form-error" id="err-student-name"></span>
+          </div>
+          <div class="form-group">
+            <label for="inp-student-email">Email Address</label>
+            <input type="email" id="inp-student-email" placeholder="aarav.sharma@example.edu">
+          </div>
+          <div class="form-group">
+            <label for="inp-student-phone">Phone Number</label>
+            <input type="tel" id="inp-student-phone" placeholder="9876543210">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-student">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-student">Save Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT INVOICE MODAL -->
+  <div class="modal-overlay" id="modal-invoice-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-invoice-title">Add Fee Invoice</h3>
+        <button class="modal-close-btn" id="btn-close-invoice-modal">&times;</button>
+      </div>
+      <form id="form-invoice">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inp-invoice-id">Invoice ID (Unique, e.g. INV-009) *</label>
+            <input type="text" id="inp-invoice-id" required placeholder="INV-009">
+            <span class="form-error" id="err-invoice-id"></span>
+          </div>
+          <div class="form-group">
+            <label for="inp-invoice-student">Student *</label>
+            <select id="inp-invoice-student" required>
+              <option value="">Select Student</option>
+            </select>
+            <span class="form-error" id="err-invoice-student"></span>
+          </div>
+          <div class="form-group">
+            <label for="inp-invoice-desc">Fee Description *</label>
+            <input type="text" id="inp-invoice-desc" required placeholder="Semester 1 Tuition">
+          </div>
+          <div class="form-group">
+            <label for="inp-invoice-amount">Amount (Rupees ₹) *</label>
+            <input type="number" id="inp-invoice-amount" required min="1" step="0.01" placeholder="50000">
+            <span class="form-error" id="err-invoice-amount"></span>
+          </div>
+          <div class="form-group">
+            <label for="inp-invoice-date">Due Date *</label>
+            <input type="date" id="inp-invoice-date" required>
+            <span class="form-error" id="err-invoice-date"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-invoice">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-invoice">Save Invoice</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MANUAL PAYMENT ENTRY MODAL -->
+  <div class="modal-overlay" id="modal-payment-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Record Manual Payment</h3>
+        <button class="modal-close-btn" id="btn-close-payment-modal">&times;</button>
+      </div>
+      <form id="form-manual-payment">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="inp-pmt-txn">Transaction Reference (Optional)</label>
+              <input type="text" id="inp-pmt-txn" placeholder="TXN-MANUAL-001">
+            </div>
+            <div class="form-group col-6">
+              <label for="inp-pmt-method">Payment Method *</label>
+              <select id="inp-pmt-method" required>
+                <option value="UPI">UPI</option>
+                <option value="NEFT">NEFT</option>
+                <option value="CHEQUE">CHEQUE</option>
+                <option value="DD">DD</option>
+                <option value="CASH">CASH</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="inp-pmt-student">Student Ref (e.g. 1KS25AI101)</label>
+              <input type="text" id="inp-pmt-student" placeholder="1KS25AI101">
+            </div>
+            <div class="form-group col-6">
+              <label for="inp-pmt-invoice">Invoice Ref (e.g. INV-001)</label>
+              <input type="text" id="inp-pmt-invoice" placeholder="INV-001">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inp-pmt-payer">Payer Name</label>
+            <input type="text" id="inp-pmt-payer" placeholder="Parent or Student Name">
+          </div>
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="inp-pmt-amount">Amount (Rupees ₹) *</label>
+              <input type="number" id="inp-pmt-amount" required min="1" step="0.01" placeholder="50000">
+              <span class="form-error" id="err-pmt-amount"></span>
+            </div>
+            <div class="form-group col-6">
+              <label for="inp-pmt-date">Payment Date *</label>
+              <input type="date" id="inp-pmt-date" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-pmt">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-pmt">Process & Reconcile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CSV UPLOAD MODAL (FOR STUDENTS / INVOICES) -->
+  <div class="modal-overlay" id="modal-csv-overlay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-csv-title">Import CSV Records</h3>
+        <button class="modal-close-btn" id="btn-close-csv-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-csv-desc" style="color:var(--text-muted);font-size:13.5px;margin-bottom:12px;">
+          Upload a comma-separated values (.csv) file to import into the college database.
+        </p>
+
+        <!-- Expected Schema Columns -->
+        <div>
+          <label style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Required Column Headers</label>
+          <div class="csv-schema-tags" id="modal-csv-tags">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Sample Preview Table -->
+        <div class="csv-preview-box">
+          <h5>Supported CSV Format Preview</h5>
+          <div class="table-responsive">
+            <table class="data-table" style="font-size:12px;" id="modal-csv-preview-table">
+              <!-- Injected dynamically -->
+            </table>
+          </div>
+        </div>
+
+        <!-- File Upload Drop Box -->
+        <div class="form-group">
+          <label for="inp-generic-csv-file">Select CSV File (UTF-8, Latin-1, max 5MB)</label>
+          <input type="file" id="inp-generic-csv-file" accept=".csv" style="padding:10px;background:var(--bg-subtle);">
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+          <a href="#" class="template-link" id="link-modal-download-sample" style="font-size:13px;font-weight:600;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download Sample CSV Template
+          </a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="btn-cancel-generic-csv">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-submit-generic-csv">Upload & Ingest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXCEPTION RESOLUTION PREVIEW & CONFIRMATION DIALOG -->
+  <div class="modal-overlay" id="modal-resolve-overlay">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="modal-resolve-title">Confirm resolution</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-resolve-modal" aria-label="Close dialog">&times;</button>
+      </div>
+      <form id="form-resolve-exception">
+        <input type="hidden" id="resolve-exception-id">
+        <input type="hidden" id="resolve-action-type">
+        <div class="modal-body">
+          <div class="resolve-preview-text" id="resolve-preview-text">
+            <!-- Plain English effect preview -->
+          </div>
+
+          <div id="resolve-student-picker-group" style="display:none;margin-top:14px;">
+            <div class="form-group">
+              <label for="resolve-student-select">Select student *</label>
+              <select id="resolve-student-select">
+                <option value="">Choose student...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="resolve-invoice-select">Select specific invoice (optional)</label>
+              <select id="resolve-invoice-select">
+                <option value="">Auto-allocate to oldest open invoice</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label for="resolve-note-input">Optional note</label>
+            <textarea id="resolve-note-input" rows="2" placeholder="Add an optional resolution note..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btn-cancel-resolve">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-confirm-resolve">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EXCEPTION DETAIL SLIDE-IN DRAWER -->
+  <div class="drawer-overlay" id="exception-drawer-overlay"></div>
+  <aside class="drawer exception-drawer" id="exception-drawer" role="dialog" aria-modal="true" aria-labelledby="exc-drawer-title">
+    <div class="drawer-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <h3 id="exc-drawer-title">Exception details</h3>
+          <span class="reason-pill reason-ambiguous" id="exc-drawer-reason-badge">Ambiguous match</span>
+          <span class="badge badge-neutral" id="exc-drawer-status-badge">Open</span>
+        </div>
+        <span class="text-muted text-sm" id="exc-drawer-subtitle">Payment #6</span>
+      </div>
+      <button type="button" class="drawer-close-btn" id="btn-close-exc-drawer" aria-label="Close details drawer">&times;</button>
+    </div>
+    <div class="drawer-body" id="exc-drawer-content">
+      <!-- Injected dynamically via JS -->
+    </div>
+    <div class="drawer-footer" id="exc-drawer-footer">
+      <!-- Injected dynamically via JS -->
+    </div>
+  </aside>
+
+  <!-- RESET DATABASE CONFIRMATION DIALOG -->
+  <div class="modal-overlay" id="modal-reset-db-overlay">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3>Delete all data?</h3>
+        <button type="button" class="modal-close-btn" id="btn-close-reset-db" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-main);font-size:14px;line-height:20px;">
+          This removes every student, invoice, and payment from the system. This action cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="btn-cancel-reset-db">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-reset-db">Delete everything</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECONCILIATION PAYMENT DETAIL CARD MODAL -->
+  <div class="modal-overlay" id="modal-payment-detail-overlay">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3 id="payment-card-title">Payment Record Card</h3>
+            <span class="badge" id="payment-card-status-badge">Matched</span>
+          </div>
+          <span class="text-muted text-sm" id="payment-card-subtitle">Automated Reconciliation & Matching Breakdown</span>
+        </div>
+        <button class="modal-close-btn" id="btn-close-payment-card">&times;</button>
+      </div>
+      <div class="modal-body" id="payment-card-body">
+        <!-- Injected dynamically via JS -->
+      </div>
+      <div class="modal-footer" id="payment-card-footer">
+        <button type="button" class="btn btn-outline-secondary" id="btn-close-payment-card-footer">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERIC CONFIRMATION DIALOG -->
+  <div class="modal-overlay" id="modal-confirm-overlay">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <h3 id="confirm-title">Are you sure?</h3>
+        <button class="modal-close-btn" id="btn-close-confirm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="btn-confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-proceed">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS CONTAINER -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- SCRIPT ENTRY POINT -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
