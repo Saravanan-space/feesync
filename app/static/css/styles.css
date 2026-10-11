@@ -1,5 +1,5 @@
 /* =====================================================================
-   FeeReconcile Design System & Global Styles
+   FeeSync Design System & Global Styles
    Strict UI/UX Specification: Light & Dark Modes, WCAG AA Contrast,
    Inter Typography, Single Primary Action per Row, Tabular Numeral Scale
    ===================================================================== */
@@ -2118,4 +2118,81 @@ body.theme-dark .skeleton-cell::after {
     flex: 1;
     text-align: center;
   }
+}
+
+/* =====================================================================
+   Dummy Login Screen
+   ===================================================================== */
+.login-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-page);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.login-screen-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg), 0 20px 35px -10px rgba(15, 23, 42, 0.12);
+  padding: 36px 32px;
+  animation: modalScaleIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-brand-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 16px -4px rgba(55, 48, 163, 0.35);
+}
+
+.login-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin: 0 0 6px 0;
+}
+
+.login-header p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 24px;
+  justify-content: center;
+  border-radius: var(--radius-md);
 }

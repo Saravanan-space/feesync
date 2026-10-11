@@ -21,7 +21,7 @@ SAMPLE_DATA_DIR = os.path.join(BASE_DIR, "sample_data")
 @router.get("/api/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "app": "FeeReconcile", "version": "1.0.0"}
+    return {"status": "ok", "app": "FeeSync", "version": "1.0.0"}
 
 
 @router.get("/api/demo/download/students.csv")

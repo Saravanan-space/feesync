@@ -1,5 +1,5 @@
 /**
- * FeeReconcile Frontend Application
+ * FeeSync Frontend Application
  * Vanilla JavaScript (Zero build tools, Zero external dependencies)
  * Strict UI/UX Specification Implementation
  */
@@ -281,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function initTheme() {
     try {
-      const saved = localStorage.getItem("feereconcile_theme");
+      const saved = localStorage.getItem("feesync_theme") || localStorage.getItem("feereconcile_theme");
       if (saved === "dark") {
         document.documentElement.classList.add("dark");
         document.body.classList.add("theme-dark");
@@ -301,7 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isDark = document.documentElement.classList.toggle("dark");
       document.body.classList.toggle("theme-dark", isDark);
       document.body.classList.toggle("theme-light", !isDark);
-      localStorage.setItem("feereconcile_theme", isDark ? "dark" : "light");
+      localStorage.setItem("feesync_theme", isDark ? "dark" : "light");
       if (state.currentView === "dashboard" && state.summary) {
         renderDashboardCharts(state.summary);
       }
@@ -370,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // Update title and subtitle
-    const meta = viewTitles[viewName] || { title: "FeeReconcile", sub: "" };
+    const meta = viewTitles[viewName] || { title: "FeeSync", sub: "" };
     const titleEl = document.getElementById("page-title");
     const subEl = document.getElementById("page-subtitle");
     if (titleEl) titleEl.textContent = meta.title;
@@ -2743,7 +2743,69 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================================================
+  // DUMMY AUTHENTICATION / LOGIN SCREEN
+  // =========================================================================
+  const loginScreen = document.getElementById("login-screen");
+  const formLogin = document.getElementById("form-login");
+  const loginEmailInp = document.getElementById("login-email");
+  const loginPasswordInp = document.getElementById("login-password");
+  const btnLogout = document.getElementById("btn-topbar-logout");
+
+  function isUserAuthenticated() {
+    return sessionStorage.getItem("feesync_auth") === "true" || sessionStorage.getItem("feereconcile_auth") === "true";
+  }
+
+  function showLoginScreen() {
+    if (loginScreen) {
+      loginScreen.classList.remove("hidden");
+    }
+  }
+
+  function hideLoginScreen() {
+    if (loginScreen) {
+      loginScreen.classList.add("hidden");
+    }
+  }
+
+  if (formLogin) {
+    formLogin.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = loginEmailInp ? loginEmailInp.value.trim() : "";
+      const pass = loginPasswordInp ? loginPasswordInp.value.trim() : "";
+
+      if (!email || !pass) {
+        showToast("Please enter email/username and password", "warning");
+        return;
+      }
+
+      sessionStorage.setItem("feesync_auth", "true");
+      sessionStorage.setItem("feesync_user", email);
+      hideLoginScreen();
+      showToast(`Welcome to FeeSync, ${email.split('@')[0] || 'Admin'}`);
+      switchView("dashboard");
+    });
+  }
+
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      sessionStorage.removeItem("feesync_auth");
+      sessionStorage.removeItem("feesync_user");
+      sessionStorage.removeItem("feereconcile_auth");
+      sessionStorage.removeItem("feereconcile_user");
+      if (loginEmailInp) loginEmailInp.value = "";
+      if (loginPasswordInp) loginPasswordInp.value = "";
+      showLoginScreen();
+      showToast("Signed out successfully", "info");
+    });
+  }
+
+  // =========================================================================
   // INITIALIZATION
   // =========================================================================
+  if (!isUserAuthenticated()) {
+    showLoginScreen();
+  } else {
+    hideLoginScreen();
+  }
   switchView("dashboard");
 });

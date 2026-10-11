@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="FeeReconcile",
+    title="FeeSync",
     description="Student Fee Obligations and Payments Reconciliation Engine",
     version="1.0.0",
     lifespan=lifespan,
@@ -71,4 +71,4 @@ def serve_index():
     index_file = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "FeeReconcile API is running. UI index.html not found."}
+    return {"message": "FeeSync API is running. UI index.html not found."}
