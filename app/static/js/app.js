@@ -1131,6 +1131,15 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         ` : ''}
 
+        ${pmt.match_status === 'Partial' ? `
+          <div class="card p-3 mb-4" style="background:var(--reason-partial-bg);border-color:var(--reason-partial-border);">
+            <div style="font-weight:600;color:var(--reason-partial-text);">Partial payment obligation</div>
+            <div class="text-sm" style="color:var(--reason-partial-text);margin-top:2px;">
+              ${escapeHtml(pmt.exceptions && pmt.exceptions.length > 0 ? pmt.exceptions[0].detail : `Partial payment of ${formatRupees(pmt.amount)} applied towards obligation, leaving an unpaid balance.`)}
+            </div>
+          </div>
+        ` : ''}
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
           <div><span class="text-muted text-xs">Transaction ID</span><div class="monospace-font">${escapeHtml(pmt.txn_ref || `PMT-${pmt.id}`)}</div></div>
           <div><span class="text-muted text-xs">Payer name</span><div>${escapeHtml(pmt.payer_name || '—')}</div></div>
@@ -1139,6 +1148,28 @@ document.addEventListener("DOMContentLoaded", () => {
           <div><span class="text-muted text-xs">Student ID reference</span><div>${escapeHtml(pmt.student_ref || 'None')}</div></div>
           <div><span class="text-muted text-xs">Matched student</span><div>${escapeHtml(pmt.matched_student_name || pmt.matched_student_id || 'Unmatched')}</div></div>
         </div>
+
+        ${pmt.allocations && pmt.allocations.length > 0 ? `
+          <div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:12px;">
+            <div class="text-xs text-muted font-semibold mb-2" style="letter-spacing:0.04em;">ALLOCATED INVOICE BREAKDOWN</div>
+            <table class="data-table" style="width:100%;font-size:13px;">
+              <thead>
+                <tr>
+                  <th>Invoice ID</th>
+                  <th class="text-right">Amount Credited</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pmt.allocations.map(a => `
+                  <tr>
+                    <td class="font-semibold">${escapeHtml(a.invoice_ref || `INV-${a.invoice_id}`)}</td>
+                    <td class="text-right font-semibold text-success tabular-nums">${formatRupees(a.amount_applied)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
       `;
     }
 
